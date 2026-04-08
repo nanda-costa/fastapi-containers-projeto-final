@@ -4,8 +4,8 @@ from datetime import datetime
 
 
 class ItemCreate(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100, examples=["Notebook"])
-    description: Optional[str] = Field(None, max_length=500, examples=["Notebook Dell 16GB"])
+    name: str = Field(..., min_length=1, max_length=100)
+    description: Optional[str] = Field(None, max_length=500)
     active: bool = Field(True)
 
 
