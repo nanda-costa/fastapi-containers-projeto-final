@@ -1,0 +1,51 @@
+services:
+
+  # ── Banco de Dados PostgreSQL ──────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: projeto_postgres
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ── API FastAPI ────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: projeto_api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    ports:
+      - "8001:8000"
+    networks:
+      - app_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+# ── Volumes Nomeados ───────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+    name: projeto_postgres_data
+
+# ── Redes ─────────────────────────────────────────────────────────────────
+networks:
+  app_network:
+    name: projeto_app_network
+    driver: bridge
