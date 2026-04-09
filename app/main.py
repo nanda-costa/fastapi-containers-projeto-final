@@ -1,4 +1,3 @@
-import json
 import logging
 import time
 from datetime import datetime
@@ -14,73 +13,101 @@ from app.database import engine, get_db
 models.Base.metadata.create_all(bind=engine)
 
 
-# ──────────────────────────────────────────────
-# Logging estruturado (JSON)
-# ──────────────────────────────────────────────
-class JsonFormatter(logging.Formatter):
+class ColorFormatter(logging.Formatter):
+    """Formatter simples com ANSI colors para logs no terminal."""
+
+    RESET = "\033[0m"
+    BOLD = "\033[1m"
+    COLORS = {
+        "DEBUG": "\033[36m",
+        "INFO": "\033[32m",
+        "WARNING": "\033[33m",
+        "ERROR": "\033[31m",
+        "CRITICAL": "\033[35m",
+    }
+    METHOD_COLORS = {
+        "GET": "\033[34m",
+        "POST": "\033[32m",
+        "PUT": "\033[33m",
+        "PATCH": "\033[35m",
+        "DELETE": "\033[31m",
+    }
+
     def format(self, record: logging.LogRecord) -> str:
-        log = {
-            "timestamp": self.formatTime(record, "%Y-%m-%dT%H:%M:%S"),
-            "level": record.levelname,
-            "message": record.getMessage(),
-        }
-        if hasattr(record, "extra"):
-            log.update(record.extra)
-        return json.dumps(log)
+        timestamp = self.formatTime(record, "%Y-%m-%d %H:%M:%S")
+        level_color = self.COLORS.get(record.levelname, self.RESET)
+        level = f"{level_color}{self.BOLD}{record.levelname:<8}{self.RESET}"
+
+        method = getattr(record, "method", None)
+        path = getattr(record, "path", None)
+        status_code = getattr(record, "status_code", None)
+        duration_ms = getattr(record, "duration_ms", None)
+        client_ip = getattr(record, "client_ip", None)
+
+        if method:
+            method_color = self.METHOD_COLORS.get(method, self.RESET)
+            method_text = f"{method_color}{method}{self.RESET}"
+        else:
+            method_text = None
+
+        parts = [f"[{timestamp}]", level, record.getMessage()]
+
+        if method_text and path:
+            parts.append(f"{method_text} {path}")
+        if status_code is not None:
+            parts.append(f"status={status_code}")
+        if duration_ms is not None:
+            parts.append(f"duration={duration_ms}ms")
+        if client_ip:
+            parts.append(f"ip={client_ip}")
+
+        return " | ".join(parts)
 
 
 handler = logging.StreamHandler()
-handler.setFormatter(JsonFormatter())
+handler.setFormatter(ColorFormatter())
 logger = logging.getLogger("api")
 logger.setLevel(logging.INFO)
-logger.addHandler(handler)
+if not logger.handlers:
+    logger.addHandler(handler)
 logger.propagate = False
 
 app = FastAPI(
     title="Gestor PD&I Track",
     description="API FastAPI + PostgreSQL containerizada com Docker Compose",
-    version="1.0.0",
+    version="1.1.0",
 )
 
 
-# ──────────────────────────────────────────────
-# Middleware — log de cada request
-# ──────────────────────────────────────────────
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     start = time.perf_counter()
     response = await call_next(request)
     duration_ms = round((time.perf_counter() - start) * 1000, 2)
     logger.info(
-        f"{request.method} {request.url.path} → {response.status_code}",
+        "Request processada",
         extra={
-            "extra": {
-                "method": request.method,
-                "path": request.url.path,
-                "status_code": response.status_code,
-                "duration_ms": duration_ms,
-                "client_ip": request.client.host if request.client else None,
-            }
+            "method": request.method,
+            "path": request.url.path,
+            "status_code": response.status_code,
+            "duration_ms": duration_ms,
+            "client_ip": request.client.host if request.client else None,
         },
     )
     return response
 
 
-# ──────────────────────────────────────────────
-# Health Check
-# ──────────────────────────────────────────────
 @app.get("/health", tags=["Health"])
 def health_check(db: Session = Depends(get_db)):
     try:
         db.execute(text("SELECT 1"))
-        logger.info("Health check OK", extra={"extra": {"db": "connected"}})
+        logger.info("Health check OK")
         return {"status": "ok", "db": "connected"}
-    except Exception as e:
-        logger.error("Health check FAILED", extra={"extra": {"error": str(e)}})
-        raise HTTPException(status_code=503, detail=f"DB unavailable: {str(e)}")
+    except Exception as exc:
+        logger.error(f"Health check FAILED: {exc}")
+        raise HTTPException(status_code=503, detail=f"DB unavailable: {exc}")
 
 
-# Projetos
 @app.post(
     "/projetos",
     response_model=schemas.ProjetoOut,
@@ -92,7 +119,7 @@ def create_projeto(projeto: schemas.ProjetoCreate, db: Session = Depends(get_db)
     db.add(db_projeto)
     db.commit()
     db.refresh(db_projeto)
-    logger.info("Projeto criado", extra={"extra": {"projeto_id": db_projeto.id}})
+    logger.info(f"Projeto criado: id={db_projeto.id}")
     return db_projeto
 
 
@@ -128,11 +155,13 @@ def update_projeto(
     )
     if not db_projeto:
         raise HTTPException(status_code=404, detail="Projeto não encontrado")
+
     for key, value in projeto.model_dump().items():
         setattr(db_projeto, key, value)
+
     db.commit()
     db.refresh(db_projeto)
-    logger.info("Projeto atualizado", extra={"extra": {"projeto_id": db_projeto.id}})
+    logger.info(f"Projeto atualizado: id={db_projeto.id}")
     return db_projeto
 
 
@@ -143,12 +172,13 @@ def delete_projeto(projeto_id: int, db: Session = Depends(get_db)):
     )
     if not db_projeto:
         raise HTTPException(status_code=404, detail="Projeto não encontrado")
+
+    for item in db_projeto.items:
+        item.idprojeto = None
+
     db.delete(db_projeto)
     db.commit()
-    logger.info("Projeto removido", extra={"extra": {"projeto_id": projeto_id}})
-
-
-# Itens
+    logger.info(f"Projeto removido: id={projeto_id}")
 
 
 @app.post(
@@ -158,7 +188,7 @@ def delete_projeto(projeto_id: int, db: Session = Depends(get_db)):
     tags=["Items"],
 )
 def create_item(item: schemas.ItemCreate, db: Session = Depends(get_db)):
-    if item.idprojeto:
+    if item.idprojeto is not None:
         projeto = (
             db.query(models.Projeto).filter(models.Projeto.id == item.idprojeto).first()
         )
@@ -169,10 +199,7 @@ def create_item(item: schemas.ItemCreate, db: Session = Depends(get_db)):
     db.add(db_item)
     db.commit()
     db.refresh(db_item)
-    logger.info(
-        "Item criado",
-        extra={"extra": {"item_id": db_item.id, "name": db_item.name}},
-    )
+    logger.info(f"Item criado: id={db_item.id}, nome={db_item.name}")
     return db_item
 
 
@@ -194,10 +221,20 @@ def update_item(item_id: int, item: schemas.ItemCreate, db: Session = Depends(ge
     db_item = db.query(models.Item).filter(models.Item.id == item_id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Item não encontrado")
+
+    if item.idprojeto is not None:
+        projeto = (
+            db.query(models.Projeto).filter(models.Projeto.id == item.idprojeto).first()
+        )
+        if not projeto:
+            raise HTTPException(status_code=404, detail="Projeto não encontrado")
+
     for key, value in item.model_dump().items():
         setattr(db_item, key, value)
+
     db.commit()
     db.refresh(db_item)
+    logger.info(f"Item atualizado: id={db_item.id}")
     return db_item
 
 
@@ -206,12 +243,24 @@ def delete_item(item_id: int, db: Session = Depends(get_db)):
     db_item = db.query(models.Item).filter(models.Item.id == item_id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Item não encontrado")
+
+    retirada_aberta = (
+        db.query(models.Withdrawal)
+        .filter(
+            models.Withdrawal.item_id == item_id,
+            models.Withdrawal.devolvido_em.is_(None),
+        )
+        .first()
+    )
+    if retirada_aberta:
+        raise HTTPException(
+            status_code=409,
+            detail="Item possui retirada em aberto e não pode ser removido",
+        )
+
     db.delete(db_item)
     db.commit()
-    logger.info("Item removido", extra={"extra": {"item_id": item_id}})
-
-
-# Bolsistas (Student)
+    logger.info(f"Item removido: id={item_id}")
 
 
 @app.post(
@@ -231,7 +280,7 @@ def create_bolsista(bolsista: schemas.StudentCreate, db: Session = Depends(get_d
     db.add(db_bolsista)
     db.commit()
     db.refresh(db_bolsista)
-    logger.info("Bolsista cadastrado", extra={"extra": {"cpf": db_bolsista.cpf}})
+    logger.info(f"Bolsista cadastrado: cpf={db_bolsista.cpf}")
     return db_bolsista
 
 
@@ -268,7 +317,6 @@ def update_bolsista(
     if not db_bolsista:
         raise HTTPException(status_code=404, detail="Bolsista não encontrado")
 
-    # Verifica conflito de CPF caso esteja sendo alterado
     if bolsista.cpf != db_bolsista.cpf:
         conflito = (
             db.query(models.Student).filter(models.Student.cpf == bolsista.cpf).first()
@@ -278,12 +326,10 @@ def update_bolsista(
 
     for key, value in bolsista.model_dump().items():
         setattr(db_bolsista, key, value)
+
     db.commit()
     db.refresh(db_bolsista)
-    logger.info(
-        "Bolsista atualizado",
-        extra={"extra": {"bolsista_id": db_bolsista.id}},
-    )
+    logger.info(f"Bolsista atualizado: id={db_bolsista.id}")
     return db_bolsista
 
 
@@ -296,10 +342,10 @@ def delete_bolsista(bolsista_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Bolsista não encontrado")
 
     retirada_aberta = (
-        db.query(models.withdrawal)
+        db.query(models.Withdrawal)
         .filter(
-            models.withdrawal.student_id == bolsista_id,
-            models.withdrawal.devolvido_em.is_(None),
+            models.Withdrawal.student_id == bolsista_id,
+            models.Withdrawal.devolvido_em.is_(None),
         )
         .first()
     )
@@ -309,22 +355,9 @@ def delete_bolsista(bolsista_id: int, db: Session = Depends(get_db)):
             detail="Bolsista possui retiradas em aberto e não pode ser removido",
         )
 
-    # Remove historico encerrado antes de excluir o bolsista para evitar
-    # referencias pendentes em bancos sem configuracao de cascade.
-    retiradas_encerradas = (
-        db.query(models.withdrawal)
-        .filter(models.withdrawal.student_id == bolsista_id)
-        .all()
-    )
-    for retirada in retiradas_encerradas:
-        db.delete(retirada)
-
     db.delete(db_bolsista)
     db.commit()
-    logger.info("Bolsista removido", extra={"extra": {"bolsista_id": bolsista_id}})
-
-
-# Retiradas (withdrawal)
+    logger.info(f"Bolsista removido: id={bolsista_id}")
 
 
 @app.post(
@@ -333,55 +366,48 @@ def delete_bolsista(bolsista_id: int, db: Session = Depends(get_db)):
     status_code=201,
     tags=["Retiradas"],
 )
-def create_retirada(retirada: schemas.WithdrawalCreate, db: Session = Depends(get_db)):
+def create_retirada(
+    retirada: schemas.WithdrawalCreate,
+    db: Session = Depends(get_db),
+):
     item = db.query(models.Item).filter(models.Item.id == retirada.item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item não encontrado")
+
     if not item.active:
         raise HTTPException(
-            status_code=409, detail="Item inativo e não pode ser retirado"
+            status_code=409,
+            detail="Item inativo e não pode ser retirado",
         )
 
-    student = (
+    bolsista = (
         db.query(models.Student).filter(models.Student.cpf == retirada.cpf).first()
     )
-    if not student:
+    if not bolsista:
         raise HTTPException(
-            status_code=404, detail="Bolsista não encontrado para esse CPF"
+            status_code=404,
+            detail="Bolsista não encontrado para esse CPF",
         )
 
     retirada_aberta = (
-        db.query(models.withdrawal)
+        db.query(models.Withdrawal)
         .filter(
-            models.withdrawal.item_id == retirada.item_id,
-            models.withdrawal.devolvido_em.is_(None),
+            models.Withdrawal.item_id == retirada.item_id,
+            models.Withdrawal.devolvido_em.is_(None),
         )
         .first()
     )
     if retirada_aberta:
         raise HTTPException(
             status_code=409,
-            detail=f"Item já retirado pelo CPF {retirada_aberta.student.cpf}",
+            detail=f"Item já retirado pelo CPF {retirada.cpf}",
         )
 
-    db_retirada = models.withdrawal(
-        item_id=item.id,
-        student_id=student.id,
-        item=item,
-        student=student,
-    )
+    db_retirada = models.Withdrawal(item_id=item.id, student_id=bolsista.id)
     db.add(db_retirada)
-    try:
-        db.flush()
-        db.commit()
-    except Exception:
-        db.rollback()
-        raise
+    db.commit()
     db.refresh(db_retirada)
-    logger.info(
-        "Retirada registrada",
-        extra={"extra": {"item_id": item.id, "cpf": student.cpf}},
-    )
+    logger.info(f"Retirada criada: id={db_retirada.id}")
     return db_retirada
 
 
@@ -390,10 +416,13 @@ def create_retirada(retirada: schemas.WithdrawalCreate, db: Session = Depends(ge
     response_model=List[schemas.WithdrawalOut],
     tags=["Retiradas"],
 )
-def list_retiradas(apenas_abertas: bool = False, db: Session = Depends(get_db)):
-    query = db.query(models.withdrawal)
+def list_retiradas(
+    apenas_abertas: bool = False,
+    db: Session = Depends(get_db),
+):
+    query = db.query(models.Withdrawal)
     if apenas_abertas:
-        query = query.filter(models.withdrawal.devolvido_em.is_(None))
+        query = query.filter(models.Withdrawal.devolvido_em.is_(None))
     return query.all()
 
 
@@ -403,12 +432,12 @@ def list_retiradas(apenas_abertas: bool = False, db: Session = Depends(get_db)):
     tags=["Retiradas"],
 )
 def get_retirada(retirada_id: int, db: Session = Depends(get_db)):
-    db_retirada = (
-        db.query(models.withdrawal).filter(models.withdrawal.id == retirada_id).first()
+    retirada = (
+        db.query(models.Withdrawal).filter(models.Withdrawal.id == retirada_id).first()
     )
-    if not db_retirada:
+    if not retirada:
         raise HTTPException(status_code=404, detail="Retirada não encontrada")
-    return db_retirada
+    return retirada
 
 
 @app.get(
@@ -417,12 +446,13 @@ def get_retirada(retirada_id: int, db: Session = Depends(get_db)):
     tags=["Retiradas"],
 )
 def retiradas_por_bolsista(cpf: str, db: Session = Depends(get_db)):
-    student = db.query(models.Student).filter(models.Student.cpf == cpf).first()
-    if not student:
+    bolsista = db.query(models.Student).filter(models.Student.cpf == cpf).first()
+    if not bolsista:
         raise HTTPException(status_code=404, detail="Bolsista não encontrado")
+
     return (
-        db.query(models.withdrawal)
-        .filter(models.withdrawal.student_id == student.id)
+        db.query(models.Withdrawal)
+        .filter(models.Withdrawal.student_id == bolsista.id)
         .all()
     )
 
@@ -433,24 +463,17 @@ def retiradas_por_bolsista(cpf: str, db: Session = Depends(get_db)):
     tags=["Retiradas"],
 )
 def devolver_item(retirada_id: int, db: Session = Depends(get_db)):
-    db_retirada = (
-        db.query(models.withdrawal).filter(models.withdrawal.id == retirada_id).first()
+    retirada = (
+        db.query(models.Withdrawal).filter(models.Withdrawal.id == retirada_id).first()
     )
-    if not db_retirada:
+    if not retirada:
         raise HTTPException(status_code=404, detail="Retirada não encontrada")
-    if db_retirada.devolvido_em:
+
+    if retirada.devolvido_em is not None:
         raise HTTPException(status_code=409, detail="Item já foi devolvido")
 
-    db_retirada.devolvido_em = datetime.now()
+    retirada.devolvido_em = datetime.utcnow()
     db.commit()
-    db.refresh(db_retirada)
-    logger.info(
-        "Item devolvido",
-        extra={
-            "extra": {
-                "retirada_id": retirada_id,
-                "item_id": db_retirada.item_id,
-            }
-        },
-    )
-    return db_retirada
+    db.refresh(retirada)
+    logger.info(f"Item devolvido: retirada_id={retirada.id}")
+    return retirada

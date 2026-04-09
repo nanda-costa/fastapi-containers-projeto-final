@@ -67,59 +67,74 @@ O <strong>Gestor PD&amp;I Track</strong> surge como uma proposta de sistema para
 
 <h2 align="center">🗃️ Estrutura Básica dos Dados</h2>
 
-Atualmente, o sistema pode ser estruturado com três entidades principais: <code>Projeto</code>, <code>Bolsista</code> e <code>Item</code>.
+Atualmente, o sistema pode ser estruturado com três entidades principais: <code>Projeto</code>, <code>Bolsista</code>, <code>Retirada</code> e <code>Item</code>.
 
-### Tabela <code>projeto</code>
-
-| Campo | Tipo | Descrição |
-| --- | --- | --- |
-| <code>id</code> | inteiro | Identificador do projeto |
-| <code>nome_projeto</code> | texto | Nome do projeto |
-| <code>data_inicio</code> | data | Data de início do projeto |
-| <code>data_fim</code> | data | Data de encerramento do projeto |
-
-### Tabela <code>bolsista</code>
+### Tabela `projetos`
 
 | Campo | Tipo | Descrição |
 | --- | --- | --- |
-| <code>id</code> | inteiro | Identificador do bolsista |
-| <code>nome</code> | texto | Nome completo do bolsista |
-| <code>cpf</code> | texto | CPF do bolsista |
-| <code>data_inicio_lab</code> | data | Data de início da atuação no laboratório |
-| <code>data_fim_lab</code> | data | Data de fim da atuação no laboratório |
+| `id` | inteiro | Identificador do projeto |
+| `nome_projeto` | texto | Nome do projeto |
+| `data_inicio` | data | Data de início |
+| `data_fim` | data | Data de término |
 
-### Tabela <code>item</code>
+### Tabela `bolsistas`
 
 | Campo | Tipo | Descrição |
 | --- | --- | --- |
-| <code>id</code> | inteiro | Identificador do item |
-| <code>name</code> | texto | Nome do item |
-| <code>description</code> | texto | Descrição complementar |
-| <code>active</code> | booleano | Indica se o item está ativo |
-| <code>created_at</code> | data/hora | Data de criação do registro |
-| <code>updated_at</code> | data/hora | Data da última atualização |
-| <code>idprojeto</code> | inteiro | Identificador do projeto ao qual o item está vinculado (chave estrangeira para <code>projeto.id</code>) |
-| <code>idbolsista</code> | inteiro | Identificador do bolsista ao qual o item está vinculado (chave estrangeira para <code>bolsista.id</code>) |
+| `id` | inteiro | Identificador do bolsista |
+| `name` | texto | Nome do bolsista |
+| `cpf` | texto | CPF único |
+| `data_inicio_lab` | data | Entrada no laboratório |
+| `data_fim_lab` | data | Saída do laboratório |
+| `created_at` | data/hora | Data de criação |
+| `updated_at` | data/hora | Data de atualização |
+
+### Tabela `items`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | inteiro | Identificador do item |
+| `name` | texto | Nome do item |
+| `description` | texto | Descrição complementar |
+| `active` | booleano | Indica se o item está ativo |
+| `created_at` | data/hora | Data de criação |
+| `updated_at` | data/hora | Data de atualização |
+| `idprojeto` | inteiro | FK para `projetos.id` |
+
+
+### Tabela `retiradas`
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | inteiro | Identificador da retirada |
+| `item_id` | inteiro | FK para `items.id` |
+| `student_id` | inteiro | FK para `bolsistas.id` |
+| `withdrawn_at` | data/hora | Data da retirada |
+| `devolvido_em` | data/hora | Data da devolução |
+
 
 ---
 <h2 align="center">📁 Estrutura do Projeto</h2>
 
 ```bash
-📦 fastapi-containers-projeto-final
-├── 📄 .dockerignore
-├── 📄 .env.example
-├── 📄 .gitignore
-├── 📄 Dockerfile
-├── 📄 README.md
-├── 📄 docker-compose.yml
-├── 📄 docker-backup.sh
-├── 📄 requirements.txt
-└── 📁 app/
-    ├── 📄 __init__.py
-    ├── 📄 database.py      # conexão com o PostgreSQL
-    ├── 📄 main.py          # rotas, health check e CRUD de itens
-    ├── 📄 models.py        # modelo ORM da tabela items
-    └── 📄 schemas.py       # schemas de entrada e saída da API
+├── 📁 app                        # API FastAPI
+│   ├── 🗄️ database.py            # Configuração da conexão com o banco e sessão
+│   ├── 🚀 main.py                # Rotas e endpoint /health
+│   ├── 🧱 models.py              # Tabelas e relacionamentos do banco
+│   └── 🧾 schemas.py             # Schemas para validação e serialização dos dados
+├── 💾 docker-backup.sh           # Script para backup e restauração do banco 
+├── 🐳 docker-compose.yml         # Orquestra os serviços da API e do PostgreSQL
+├── 🐋 Dockerfile                 # Define a imagem da aplicação com usuário não-root
+├── 🧭 docker-menu.sh             # Menu interativo com comandos Docker organizados por categoria
+├── 📜 LICENSE                    # Licença do projeto
+├── 🛠️ makefile                  # Atalhos para subir stack, logs, testes, build e depuração
+├── 📘 README.md                  # Documentação do projeto, execução e uso da API
+├── 📦 requirements.txt           # Dependências Python do projeto
+├── ⚙️ setup.cfg                 # Configurações de lint, testes e ferramentas auxiliares
+└── 📁 tests                      # Testes automatizados da aplicação
+    └── 🧪 test_api.py            # Testes da API e validação dos endpoints principais
+
 ```
 
 ---
@@ -144,7 +159,7 @@ Atualmente, o sistema pode ser estruturado com três entidades principais: <code
 ```bash
 git clone https://github.com/nanda-costa/gestor-pdi-track.git
 cd gestor-pdi-track
-```
+````
 
 ### 2. Criar o arquivo de ambiente
 
@@ -154,16 +169,51 @@ cp .env.example .env
 
 Se desejar, ajuste no arquivo <code>.env</code> os valores de usuário, senha e nome do banco.
 
-### 3. Subir os containers
+### 3. Escolher uma forma de subir o projeto
+
+#### Opção 1: com Docker Compose direto
 
 ```bash
 docker compose up -d --build
 ```
 
+#### Opção 2: com Makefile
+
+```bash
+make up-build
+```
+
+Para visualizar todos os comandos disponíveis:
+
+```bash
+make help
+```
+
+#### Opção 3: com menu interativo
+
+```bash
+chmod +x docker-menu.sh
+./docker-menu.sh
+```
+
+Ou, se preferir:
+
+```bash
+make menu
+```
+
 ### 4. Verificar se os serviços estão em execução
+
+#### Com Docker Compose
 
 ```bash
 docker compose ps
+```
+
+#### Com Makefile
+
+```bash
+make ps
 ```
 
 ### 5. Acessar a aplicação
@@ -171,20 +221,21 @@ docker compose ps
 A API ficará disponível em:
 
 ```bash
-http://localhost:8001
+http://localhost:8000
 ```
 
 A documentação interativa poderá ser acessada em:
 
 ```bash
-http://localhost:8001/docs
+http://localhost:8000/docs
 ```
 
 O health check poderá ser testado em:
 
 ```bash
-http://localhost:8001/health
+http://localhost:8000/health
 ```
+
 
 ---
 

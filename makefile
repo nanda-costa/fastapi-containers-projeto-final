@@ -1,8 +1,14 @@
-.PHONY: help up down build restart logs shell lint lint-flake8 format check test clean
+.PHONY: help menu \
+	up up-build down down-v build restart restart-api \
+	logs logs-api logs-db ps health \
+	shell shell-db inspect-api inspect-db \
+	build-no-cache images prune \
+	lint lint-flake8 format check test test-cov clean
 
 # ── Variáveis ─────────────────────────────────────────────────────────────────
 COMPOSE  = docker compose
 API      = projeto_api
+DB       = projeto_postgres
 SRC_DIR  = app
 APP_FILE := $(if $(wildcard main.py),main.py,$(SRC_DIR)/main.py)
 PYTHON   ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
@@ -13,10 +19,49 @@ ISORT    := $(PYTHON) -m isort
 
 # ── Ajuda ─────────────────────────────────────────────────────────────────────
 help: ## Mostra esta mensagem de ajuda
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
-		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}'
+	@printf "\n\033[1;36mCiclo da Stack\033[0m\n"
+	@printf "  make up             - sobe todos os serviços em background\n"
+	@printf "  make up-build       - sobe tudo com rebuild das imagens\n"
+	@printf "  make down           - para e remove containers\n"
+	@printf "  make down-v         - para containers e remove volumes\n"
+	@printf "  make build          - apenas reconstrói as imagens\n"
+	@printf "  make restart        - reinicia todos os serviços\n"
+	@printf "  make restart-api    - reinicia apenas a API\n"
 
-# ── Docker Compose ────────────────────────────────────────────────────────────
+	@printf "\n\033[1;36mDiagnóstico\033[0m\n"
+	@printf "  make ps             - lista os containers em execução\n"
+	@printf "  make logs           - acompanha logs de todos os serviços\n"
+	@printf "  make logs-api       - acompanha logs apenas da API\n"
+	@printf "  make logs-db        - acompanha logs apenas do banco\n"
+	@printf "  make health         - checa o endpoint /health da API\n"
+
+	@printf "\n\033[1;36mDepuração\033[0m\n"
+	@printf "  make shell          - abre shell no container da API\n"
+	@printf "  make shell-db       - abre psql no container do banco\n"
+	@printf "  make inspect-api    - inspeciona o container da API\n"
+	@printf "  make inspect-db     - inspeciona o container do banco\n"
+
+	@printf "\n\033[1;36mImagens e Build\033[0m\n"
+	@printf "  make build-no-cache - reconstrói imagens sem cache\n"
+	@printf "  make images         - lista imagens Docker locais\n"
+	@printf "  make prune          - remove recursos Docker não usados\n"
+
+	@printf "\n\033[1;36mQualidade de Código\033[0m\n"
+	@printf "  make lint           - verifica o código com flake8\n"
+	@printf "  make format         - formata o código com black e isort\n"
+	@printf "  make check          - verifica formatação sem alterar arquivos\n"
+	@printf "  make test           - executa os testes com pytest\n"
+	@printf "  make test-cov       - executa testes com cobertura\n"
+	@printf "  make clean          - remove arquivos de cache\n"
+
+	@printf "\n\033[1;36mExtra\033[0m\n"
+	@printf "  make menu           - abre o menu interativo de Docker\n\n"
+
+# ── Menu Interativo ───────────────────────────────────────────────────────────
+menu: ## Abre o menu interativo com comandos Docker
+	chmod +x docker-menu.sh && ./docker-menu.sh
+
+# ── Docker Compose / Ciclo da Stack ───────────────────────────────────────────
 up: ## Sobe todos os serviços em background
 	$(COMPOSE) up -d
 
@@ -38,7 +83,7 @@ restart: ## Reinicia todos os serviços
 restart-api: ## Reinicia apenas a API
 	$(COMPOSE) restart api
 
-# ── Logs ──────────────────────────────────────────────────────────────────────
+# ── Logs / Diagnóstico ────────────────────────────────────────────────────────
 logs: ## Acompanha logs de todos os serviços
 	$(COMPOSE) logs -f
 
@@ -48,12 +93,34 @@ logs-api: ## Acompanha logs apenas da API
 logs-db: ## Acompanha logs apenas do banco
 	$(COMPOSE) logs -f postgres
 
-# ── Shell ─────────────────────────────────────────────────────────────────────
-shell: ## Abre bash no container da API
-	$(COMPOSE) exec api bash
+ps: ## Lista os containers em execução
+	$(COMPOSE) ps
+
+health: ## Checa o endpoint /health da API
+	curl -s http://localhost:8000/health | python3 -m json.tool
+
+# ── Shell / Depuração ─────────────────────────────────────────────────────────
+shell: ## Abre shell no container da API
+	$(COMPOSE) exec api sh
 
 shell-db: ## Abre psql no container do banco
 	$(COMPOSE) exec postgres psql -U $${POSTGRES_USER} -d $${POSTGRES_DB}
+
+inspect-api: ## Mostra detalhes completos do container da API
+	docker inspect $(API)
+
+inspect-db: ## Mostra detalhes completos do container do banco
+	docker inspect $(DB)
+
+# ── Imagens e Build ───────────────────────────────────────────────────────────
+build-no-cache: ## Reconstrói as imagens sem usar cache
+	$(COMPOSE) build --no-cache
+
+images: ## Lista imagens Docker locais
+	docker images
+
+prune: ## Remove recursos Docker não utilizados
+	docker system prune
 
 # ── Qualidade de Código ───────────────────────────────────────────────────────
 lint: ## Verifica o código com flake8
@@ -78,12 +145,6 @@ test-cov: ## Executa testes com relatório de cobertura
 	$(PYTHON) -m pytest --cov=$(SRC_DIR) --cov-report=term-missing -v
 
 # ── Utilitários ───────────────────────────────────────────────────────────────
-ps: ## Lista os containers em execução
-	$(COMPOSE) ps
-
-health: ## Checa o endpoint /health da API
-	curl -s http://localhost:8001/health | python3 -m json.tool
-
 clean: ## Remove arquivos de cache Python
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete

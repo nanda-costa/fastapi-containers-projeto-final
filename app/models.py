@@ -35,7 +35,7 @@ class Student(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    withdrawals = relationship("withdrawal", back_populates="student")
+    withdrawals = relationship("Withdrawal", back_populates="student")
 
 
 class Item(Base):
@@ -47,15 +47,15 @@ class Item(Base):
     active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    idprojeto = Column(Integer, ForeignKey("projetos.id"), nullable=True)
-    idbolsista = Column(Integer, ForeignKey("bolsistas.id"), nullable=True)
+    idprojeto = Column(
+        Integer, ForeignKey("projetos.id", ondelete="SET NULL"), nullable=True
+    )
 
     projeto = relationship("Projeto", back_populates="items")
-    bolsista = relationship("Student")
-    withdrawals = relationship("withdrawal", back_populates="item")
+    withdrawals = relationship("Withdrawal", back_populates="item")
 
 
-class withdrawal(Base):
+class Withdrawal(Base):
     __tablename__ = "retiradas"
 
     id = Column(Integer, primary_key=True, index=True)
