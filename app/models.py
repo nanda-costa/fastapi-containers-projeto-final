@@ -35,7 +35,11 @@ class Student(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    withdrawals = relationship("Withdrawal", back_populates="student")
+    withdrawals = relationship(
+        "Withdrawal",
+        back_populates="student",
+        cascade="all, delete-orphan",
+    )
 
 
 class Item(Base):
@@ -52,7 +56,11 @@ class Item(Base):
     )
 
     projeto = relationship("Projeto", back_populates="items")
-    withdrawals = relationship("Withdrawal", back_populates="item")
+    withdrawals = relationship(
+        "Withdrawal",
+        back_populates="item",
+        cascade="all, delete-orphan",
+    )
 
 
 class Withdrawal(Base):

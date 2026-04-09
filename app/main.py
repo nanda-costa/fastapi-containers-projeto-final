@@ -1,6 +1,6 @@
 import logging
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import List
 
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -79,6 +79,10 @@ app = FastAPI(
 )
 
 
+def keep_loaded_state(db: Session) -> None:
+    db.expire_on_commit = False
+
+
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     start = time.perf_counter()
@@ -115,6 +119,7 @@ def health_check(db: Session = Depends(get_db)):
     tags=["Projetos"],
 )
 def create_projeto(projeto: schemas.ProjetoCreate, db: Session = Depends(get_db)):
+    keep_loaded_state(db)
     db_projeto = models.Projeto(**projeto.model_dump())
     db.add(db_projeto)
     db.commit()
@@ -150,6 +155,7 @@ def update_projeto(
     projeto: schemas.ProjetoCreate,
     db: Session = Depends(get_db),
 ):
+    keep_loaded_state(db)
     db_projeto = (
         db.query(models.Projeto).filter(models.Projeto.id == projeto_id).first()
     )
@@ -167,6 +173,7 @@ def update_projeto(
 
 @app.delete("/projetos/{projeto_id}", status_code=204, tags=["Projetos"])
 def delete_projeto(projeto_id: int, db: Session = Depends(get_db)):
+    keep_loaded_state(db)
     db_projeto = (
         db.query(models.Projeto).filter(models.Projeto.id == projeto_id).first()
     )
@@ -188,6 +195,7 @@ def delete_projeto(projeto_id: int, db: Session = Depends(get_db)):
     tags=["Items"],
 )
 def create_item(item: schemas.ItemCreate, db: Session = Depends(get_db)):
+    keep_loaded_state(db)
     if item.idprojeto is not None:
         projeto = (
             db.query(models.Projeto).filter(models.Projeto.id == item.idprojeto).first()
@@ -218,6 +226,7 @@ def get_item(item_id: int, db: Session = Depends(get_db)):
 
 @app.put("/items/{item_id}", response_model=schemas.ItemOut, tags=["Items"])
 def update_item(item_id: int, item: schemas.ItemCreate, db: Session = Depends(get_db)):
+    keep_loaded_state(db)
     db_item = db.query(models.Item).filter(models.Item.id == item_id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Item não encontrado")
@@ -240,6 +249,7 @@ def update_item(item_id: int, item: schemas.ItemCreate, db: Session = Depends(ge
 
 @app.delete("/items/{item_id}", status_code=204, tags=["Items"])
 def delete_item(item_id: int, db: Session = Depends(get_db)):
+    keep_loaded_state(db)
     db_item = db.query(models.Item).filter(models.Item.id == item_id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Item não encontrado")
@@ -270,6 +280,7 @@ def delete_item(item_id: int, db: Session = Depends(get_db)):
     tags=["Bolsistas"],
 )
 def create_bolsista(bolsista: schemas.StudentCreate, db: Session = Depends(get_db)):
+    keep_loaded_state(db)
     existente = (
         db.query(models.Student).filter(models.Student.cpf == bolsista.cpf).first()
     )
@@ -311,6 +322,7 @@ def update_bolsista(
     bolsista: schemas.StudentCreate,
     db: Session = Depends(get_db),
 ):
+    keep_loaded_state(db)
     db_bolsista = (
         db.query(models.Student).filter(models.Student.id == bolsista_id).first()
     )
@@ -335,6 +347,7 @@ def update_bolsista(
 
 @app.delete("/bolsistas/{bolsista_id}", status_code=204, tags=["Bolsistas"])
 def delete_bolsista(bolsista_id: int, db: Session = Depends(get_db)):
+    keep_loaded_state(db)
     db_bolsista = (
         db.query(models.Student).filter(models.Student.id == bolsista_id).first()
     )
@@ -370,6 +383,7 @@ def create_retirada(
     retirada: schemas.WithdrawalCreate,
     db: Session = Depends(get_db),
 ):
+    keep_loaded_state(db)
     item = db.query(models.Item).filter(models.Item.id == retirada.item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item não encontrado")
@@ -463,6 +477,7 @@ def retiradas_por_bolsista(cpf: str, db: Session = Depends(get_db)):
     tags=["Retiradas"],
 )
 def devolver_item(retirada_id: int, db: Session = Depends(get_db)):
+    keep_loaded_state(db)
     retirada = (
         db.query(models.Withdrawal).filter(models.Withdrawal.id == retirada_id).first()
     )
@@ -472,7 +487,7 @@ def devolver_item(retirada_id: int, db: Session = Depends(get_db)):
     if retirada.devolvido_em is not None:
         raise HTTPException(status_code=409, detail="Item já foi devolvido")
 
-    retirada.devolvido_em = datetime.utcnow()
+    retirada.devolvido_em = datetime.now(UTC)
     db.commit()
     db.refresh(retirada)
     logger.info(f"Item devolvido: retirada_id={retirada.id}")
