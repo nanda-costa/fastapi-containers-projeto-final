@@ -12,12 +12,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Diretório de trabalho
 WORKDIR /app
 
-# Dependências do sistema (necessárias para psycopg2-binary)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        gcc \
-        libpq-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# psycopg2-binary já inclui os binários do libpq — nenhuma dep de sistema necessária
 
 # Copia e instala dependências Python primeiro (cache de camadas)
 COPY requirements.txt .
