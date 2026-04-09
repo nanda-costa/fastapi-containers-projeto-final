@@ -99,6 +99,7 @@ Atualmente, o sistema pode ser estruturado com três entidades principais: <code
 | <code>created_at</code> | data/hora | Data de criação do registro |
 | <code>updated_at</code> | data/hora | Data da última atualização |
 | <code>idprojeto</code> | inteiro | Identificador do projeto ao qual o item está vinculado (chave estrangeira para <code>projeto.id</code>) |
+| <code>idbolsista</code> | inteiro | Identificador do bolsista ao qual o item está vinculado (chave estrangeira para <code>bolsista.id</code>) |
 
 ---
 <h2 align="center">📁 Estrutura do Projeto</h2>
