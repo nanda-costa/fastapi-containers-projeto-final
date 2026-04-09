@@ -244,27 +244,26 @@ http://localhost:8000/health
 ### Criar um item
 
 ```bash
-curl -X POST http://localhost:8001/items \
+curl -X POST http://localhost:8000/items \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Notebook",
     "description": "Notebook destinado às atividades do projeto",
     "active": true,
-    "idprojeto": 1,
-    "idbolsista": 1
+    "idprojeto": 1
   }'
 ```
 
 ### Listar itens
 
 ```bash
-curl http://localhost:8001/items
+curl http://localhost:8000/items
 ```
 
 ### Buscar status da aplicação
 
 ```bash
-curl http://localhost:8001/health
+curl http://localhost:8000/health
 ```
 
 ---
