@@ -1,189 +1,276 @@
-# 🐳 Projeto Final — Fundamentos de Containers
+<h1 align="center">📑 Gestor PD&I Track</h1>
 
-> **Aula 08 · 09/04/2026 · Prof. Fabio Santos da Silva**  
-> API FastAPI + PostgreSQL containerizada com Docker Compose
+<p align="center">
+  <img src="https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExc3VlaWwzcGs2dWhzZmo4bTk3YXpzemNvOWpidTlweXQ5bW93aTY4aCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/aBNx9CPiYX5NdsJvS6/giphy.gif" width="260">
+</p>
+
+<p align="center">
+  Sistema web para apoio à administração de projetos de <strong>Pesquisa, Desenvolvimento e Inovação (PD&amp;I)</strong>,<br>
+  com foco no <strong>controle de itens recebidos e adquiridos</strong>, facilitando a organização, o acompanhamento e a futura prestação de contas.<br>
+</p>
+
+
+
+<h2 align="center">🤖 Tecnologias Utilizadas</h2>
+
+<p align="center">
+  <a href="https://www.python.org"><img alt="Python" src="https://img.shields.io/badge/Python-3.12-blue?style=for-the-badge&logo=python"></a>
+  <a href="https://fastapi.tiangolo.com/"><img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.115-009688?style=for-the-badge&logo=fastapi"></a>
+  <a href="https://www.postgresql.org/"><img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-16-336791?style=for-the-badge&logo=postgresql"></a>
+  <a href="https://www.sqlalchemy.org/"><img alt="SQLAlchemy" src="https://img.shields.io/badge/SQLAlchemy-2.0-D71F00?style=for-the-badge"></a>
+  <a href="https://www.docker.com/"><img alt="Docker" src="https://img.shields.io/badge/Docker-Containerizado-2496ED?style=for-the-badge&logo=docker"></a>
+  <a href="https://docs.docker.com/compose/"><img alt="Docker Compose" src="https://img.shields.io/badge/Docker_Compose-Orquestra%C3%A7%C3%A3o-1D63ED?style=for-the-badge&logo=docker"></a>
+</p>
 
 ---
 
-## 📋 Visão Geral
+<h2 align="center">📝 Descrição do Projeto</h2>
 
-Este projeto implementa uma **API REST** completa em **Python/FastAPI**, containerizada com **Docker** e orquestrada via **Docker Compose**, atendendo a todos os critérios da avaliação final do curso.
+O <strong>Gestor PD&amp;I Track</strong> é uma aplicação backend desenvolvida para apoiar a gestão administrativa de projetos de PD&amp;I, oferecendo uma base simples e funcional para o controle de itens relacionados ao projeto.
 
-### Stack
+A proposta do sistema é centralizar o cadastro e a consulta de materiais, equipamentos, insumos ou demais itens vinculados às atividades do projeto, permitindo que essas informações permaneçam organizadas ao longo da execução. Dessa forma, a solução contribui para o acompanhamento interno e também para processos de conferência e prestação de contas ao final do projeto.
 
-| Camada | Tecnologia |
-|--------|-----------|
-| API | Python 3.12 + FastAPI 0.115 |
-| ORM | SQLAlchemy 2.0 |
-| Banco | PostgreSQL 16 (Alpine) |
-| Container | Docker + Docker Compose |
+Nesta versão, o sistema implementa uma <strong>API REST</strong> com operações de cadastro, listagem, busca, atualização e remoção de itens, utilizando <strong>FastAPI</strong>, <strong>PostgreSQL</strong> e execução containerizada com <strong>Docker Compose</strong>.
 
 ---
 
-## 🗂️ Estrutura do Projeto
+<h2 align="center">🎯 Objetivo do Projeto</h2>
 
+- Oferecer uma base digital para o controle de itens recebidos ou comprados em projetos de PD&amp;I;
+- Facilitar a organização administrativa das informações relacionadas aos itens do projeto;
+- Apoiar o acompanhamento de registros que podem ser úteis em etapas de conferência e prestação de contas;
+- Demonstrar uma solução backend containerizada, simples de executar e manter;
+- Disponibilizar uma API pronta para futura expansão com novas regras de negócio.
+
+---
+
+<h2 align="center">🧩 Contexto de Uso</h2>
+
+Em projetos de pesquisa e desenvolvimento, é comum haver o recebimento ou a aquisição de diferentes itens ao longo da execução, como materiais de consumo, equipamentos, acessórios ou recursos de apoio. Quando essas informações ficam descentralizadas, o acompanhamento administrativo se torna mais difícil, especialmente em momentos de auditoria, encerramento do projeto ou prestação de contas.
+
+O <strong>Gestor PD&amp;I Track</strong> surge como uma proposta de sistema para organizar esse controle de forma estruturada. Embora esta versão seja enxuta, ela já estabelece a base necessária para registrar itens e manter um histórico operacional mínimo no banco de dados, servindo como ponto de partida para evoluções futuras.
+
+---
+
+<h2 align="center">⚙️ Funcionalidades Disponíveis</h2>
+
+| Funcionalidade | Descrição |
+| --- | --- |
+| Health check | Verifica se a API e o banco estão disponíveis |
+| Cadastro de itens | Registra um novo item no sistema |
+| Listagem de itens | Retorna os itens cadastrados |
+| Consulta por ID | Busca um item específico |
+| Atualização de item | Altera os dados de um item existente |
+| Remoção de item | Exclui um item do sistema |
+
+---
+
+<h2 align="center">🗃️ Estrutura Básica dos Dados</h2>
+
+Atualmente, o sistema pode ser estruturado com três entidades principais: <code>Projeto</code>, <code>Bolsista</code> e <code>Item</code>. A tabela <code>Item</code> passa a se relacionar com a tabela <code>Projeto</code> por meio do campo <code>codprojeto</code>, que atua como chave estrangeira.
+
+### Tabela <code>projeto</code>
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| <code>id</code> | inteiro | Identificador do projeto |
+| <code>nome_projeto</code> | texto | Nome do projeto |
+| <code>data_inicio</code> | data | Data de início do projeto |
+| <code>data_fim</code> | data | Data de encerramento do projeto |
+
+### Tabela <code>bolsista</code>
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| <code>id</code> | inteiro | Identificador do bolsista |
+| <code>nome</code> | texto | Nome completo do bolsista |
+| <code>cpf</code> | texto | CPF do bolsista |
+| <code>data_inicio_lab</code> | data | Data de início da atuação no laboratório |
+| <code>data_fim_lab</code> | data | Data de fim da atuação no laboratório |
+
+### Tabela <code>item</code>
+
+| Campo | Tipo | Descrição |
+| --- | --- | --- |
+| <code>id</code> | inteiro | Identificador do item |
+| <code>name</code> | texto | Nome do item |
+| <code>description</code> | texto | Descrição complementar |
+| <code>active</code> | booleano | Indica se o item está ativo |
+| <code>created_at</code> | data/hora | Data de criação do registro |
+| <code>updated_at</code> | data/hora | Data da última atualização |
+| <code>idprojeto</code> | inteiro | Identificador do projeto ao qual o item está vinculado (chave estrangeira para <code>projeto.id</code>) |
+
+---
+<h2 align="center">📁 Estrutura do Projeto</h2>
+
+```bash
+📦 fastapi-containers-projeto-final
+├── 📄 .dockerignore
+├── 📄 .env.example
+├── 📄 .gitignore
+├── 📄 Dockerfile
+├── 📄 README.md
+├── 📄 docker-compose.yml
+├── 📄 docker-backup.sh
+├── 📄 requirements.txt
+└── 📁 app/
+    ├── 📄 __init__.py
+    ├── 📄 database.py      # conexão com o PostgreSQL
+    ├── 📄 main.py          # rotas, health check e CRUD de itens
+    ├── 📄 models.py        # modelo ORM da tabela items
+    └── 📄 schemas.py       # schemas de entrada e saída da API
 ```
-fastapi-project/
-├── app/
-│   ├── __init__.py
-│   ├── main.py          # Rotas FastAPI
-│   ├── database.py      # Conexão SQLAlchemy
-│   ├── models.py        # Modelos ORM
-│   └── schemas.py       # Schemas Pydantic
-├── backups/             # Gerado pelo docker-backup.sh
-├── .dockerignore
-├── .env.example         # ← copie para .env
-├── .gitignore
-├── docker-backup.sh     # Script de backup/restore
-├── docker-compose.yml
-├── Dockerfile
-├── requirements.txt
-└── README.md
-```
 
 ---
 
-## 🚀 Como Rodar
+<h2 align="center">🔌 Endpoints da API</h2>
 
-### 1. Pré-requisitos
+| Método | Rota | Descrição |
+| --- | --- | --- |
+| <code>GET</code> | <code>/health</code> | Verifica a saúde da API e do banco |
+| <code>POST</code> | <code>/items</code> | Cria um item |
+| <code>GET</code> | <code>/items</code> | Lista os itens |
+| <code>GET</code> | <code>/items/{id}</code> | Busca um item por ID |
+| <code>PUT</code> | <code>/items/{id}</code> | Atualiza um item |
+| <code>DELETE</code> | <code>/items/{id}</code> | Remove um item |
 
-- Docker ≥ 24 e Docker Compose ≥ 2.20 instalados
-- `git clone` ou download do projeto
+---
 
-### 2. Configurar variáveis de ambiente
+<h2 align="center">🚀 Como Utilizar</h2>
+
+### 1. Clonar o repositório
+
+```bash
+git clone https://github.com/nanda-costa/fastapi-containers-projeto-final.git
+cd fastapi-containers-projeto-final
+```
+
+### 2. Criar o arquivo de ambiente
 
 ```bash
 cp .env.example .env
-# Edite .env e troque a senha padrão!
-nano .env
 ```
 
-### 3. Subir a stack
+Se desejar, ajuste no arquivo <code>.env</code> os valores de usuário, senha e nome do banco.
+
+### 3. Subir os containers
 
 ```bash
 docker compose up -d --build
 ```
 
-> A API aguarda o banco estar saudável antes de iniciar (healthcheck + `depends_on`).
-
-### 4. Verificar
+### 4. Verificar se os serviços estão em execução
 
 ```bash
-# Status dos serviços
 docker compose ps
+```
 
-# Health check da API
-curl http://localhost:8000/health
-# → {"status":"ok","db":"connected"}
+### 5. Acessar a aplicação
 
-# Documentação interativa
-open http://localhost:8000/docs
+A API ficará disponível em:
+
+```bash
+http://localhost:8001
+```
+
+A documentação interativa poderá ser acessada em:
+
+```bash
+http://localhost:8001/docs
+```
+
+O health check poderá ser testado em:
+
+```bash
+http://localhost:8001/health
 ```
 
 ---
 
-## 📡 Endpoints
+<h2 align="center">🧪 Exemplos de Uso</h2>
 
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| `GET` | `/health` | Health check (API + DB) |
-| `POST` | `/items` | Criar item |
-| `GET` | `/items` | Listar itens |
-| `GET` | `/items/{id}` | Buscar item por ID |
-| `PUT` | `/items/{id}` | Atualizar item |
-| `DELETE` | `/items/{id}` | Remover item |
-
-### Exemplo de uso
+### Criar um item
 
 ```bash
-# Criar item
-curl -X POST http://localhost:8000/items \
+curl -X POST http://localhost:8001/items \
   -H "Content-Type: application/json" \
-  -d '{"name": "Notebook", "description": "Dell XPS 16GB", "active": true}'
+  -d '{
+    "name": "Notebook",
+    "description": "Notebook destinado às atividades do projeto",
+    "active": true
+  }'
+```
 
-# Listar itens
-curl http://localhost:8000/items
+### Listar itens
+
+```bash
+curl http://localhost:8001/items
+```
+
+### Buscar status da aplicação
+
+```bash
+curl http://localhost:8001/health
 ```
 
 ---
 
-## 💾 Backup e Restore
+<h2 align="center">💾 Backup e Restauração</h2>
+
+O projeto também possui um script auxiliar para backup e restauração do banco de dados.
 
 ```bash
-# Tornar o script executável (uma vez)
 chmod +x docker-backup.sh
+```
 
-# Fazer backup
+### Fazer backup
+
+```bash
 ./docker-backup.sh backup
+```
 
-# Listar backups disponíveis
+### Listar backups
+
+```bash
 ./docker-backup.sh list
+```
 
-# Restaurar o backup mais recente
+### Restaurar o backup mais recente
+
+```bash
 ./docker-backup.sh restore
 ```
 
-Os backups ficam comprimidos em `./backups/backup_YYYYMMDD_HHMMSS.sql.gz`.
+---
+
+<h2 align="center">✅ Boas Práticas Implementadas</h2>
+
+- Uso de imagem oficial e enxuta do Python;
+- Execução da aplicação com usuário não root;
+- Separação de variáveis sensíveis em arquivo <code>.env</code>;
+- Persistência dos dados do PostgreSQL com volume nomeado;
+- Health check do banco de dados;
+- Inicialização ordenada dos serviços com <code>depends_on</code>;
+- Estrutura simples e organizada para evolução futura.
 
 ---
 
-## 🔧 Comandos Úteis
+<h2 align="center">👥 Equipe</h2>
 
-```bash
-# Subir com rebuild
-docker compose up -d --build
+| Integrante | GitHub |
+| --- | --- |
+| Juliana Ballin Lima | [JulianaBallin](https://github.com/JulianaBallin) |
+| Camila Félix dos Reis | [cawzkf](https://github.com/cawzkf) |
+| Pedro Dias | [pedroddias-oss](https://github.com/pedroddias-oss) |
+| Fernanda Costa | [nanda-costa](https://github.com/nanda-costa) |
 
-# Ver logs da API em tempo real
-docker compose logs -f api
+---
+<h2 align="center">📌 Considerações Finais</h2>
 
-# Ver logs do banco
-docker compose logs postgres
-
-# Abrir shell no container da API
-docker compose exec api sh
-
-# Acessar o banco via psql
-docker compose exec postgres psql -U appuser -d appdb
-
-# Parar e remover containers (dados persistem no volume!)
-docker compose down
-
-# Parar e remover TUDO incluindo volumes (⚠️ apaga dados!)
-docker compose down -v
-
-# Reiniciar apenas a API
-docker compose restart api
-```
+O <strong>PD&amp;I Track</strong> foi pensado como uma base inicial para um sistema de apoio à gestão administrativa de projetos de PD&amp;I, especialmente no controle de itens que precisam ser registrados, acompanhados e posteriormente conferidos. A estrutura atual é simples, mas já demonstra uma organização técnica consistente e pronta para evolução.
 
 ---
 
-## 🔐 Boas Práticas Implementadas
-
-- ✅ **Usuário não-root** (`appuser`) no container da API
-- ✅ **Senhas apenas no `.env`** — nunca no código ou Compose
-- ✅ **`.dockerignore`** excluindo `.env` e `__pycache__`
-- ✅ **Healthcheck** no PostgreSQL + `depends_on: condition: service_healthy`
-- ✅ **Volume nomeado** para persistência dos dados do banco
-- ✅ **Rede isolada** entre os serviços (`app_network`)
-- ✅ **Tag de versão específica** nas imagens (`python:3.12-slim`, `postgres:16-alpine`)
-
----
-
-## 📊 Critérios de Avaliação
-
-| Critério | Pts | Status |
-|----------|-----|--------|
-| Dockerfile correto (imagem oficial, tag, non-root, .dockerignore) | 20 | ✅ |
-| docker-compose.yml funcional (serviços, rede, volume) | 25 | ✅ |
-| Segurança e boas práticas (.env, healthcheck, depends_on) | 20 | ✅ |
-| Stack funcionando ao vivo (up -d, /health, persistência) | 35 | ✅ |
-| **Total** | **100** | 🏆 |
-
----
-
-## 🚀 Próximos Passos
-
-- **Kubernetes** — orquestração em escala
-- **CI/CD** com GitHub Actions
-- **Docker em Cloud** — AWS ECS / GCP Cloud Run
-- **Monitoramento** com Prometheus + Grafana
+<p align="center">
+  Desenvolvido como projeto final da disciplina <strong>Fundamentos de Docker</strong>, ministrada pelo <strong>Professor Fabio Santos da Silva</strong> no ano 2026.
+</p>
