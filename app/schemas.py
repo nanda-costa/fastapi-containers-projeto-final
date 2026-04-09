@@ -29,7 +29,6 @@ class ItemCreate(BaseModel):
 
 class ItemOut(ItemCreate):
     id: int
-    idbolsista: Optional[int] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
