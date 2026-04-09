@@ -274,6 +274,12 @@ O <strong>PD&amp;I Track</strong> foi pensado como uma base inicial para um sist
 
 ---
 
+<h2 align="center">📄 Licença</h2>
+
+Este projeto está licenciado sob a licença MIT. Consulte o arquivo <code>LICENSE</code> para mais informações.
+
+---
+
 <p align="center">
   Desenvolvido como projeto final da disciplina <strong>Fundamentos de Docker</strong>, ministrada pelo <strong>Professor Fabio Santos da Silva</strong> no ano de 2026.
 </p>
