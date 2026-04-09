@@ -67,7 +67,7 @@ O <strong>Gestor PD&amp;I Track</strong> surge como uma proposta de sistema para
 
 <h2 align="center">🗃️ Estrutura Básica dos Dados</h2>
 
-Atualmente, o sistema pode ser estruturado com três entidades principais: <code>Projeto</code>, <code>Bolsista</code> e <code>Item</code>. A tabela <code>Item</code> passa a se relacionar com a tabela <code>Projeto</code> por meio do campo <code>codprojeto</code>, que atua como chave estrangeira.
+Atualmente, o sistema pode ser estruturado com três entidades principais: <code>Projeto</code>, <code>Bolsista</code> e <code>Item</code>.
 
 ### Tabela <code>projeto</code>
 
