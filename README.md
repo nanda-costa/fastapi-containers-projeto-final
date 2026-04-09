@@ -142,8 +142,8 @@ Atualmente, o sistema pode ser estruturado com três entidades principais: <code
 ### 1. Clonar o repositório
 
 ```bash
-git clone https://github.com/nanda-costa/fastapi-containers-projeto-final.git
-cd fastapi-containers-projeto-final
+git clone https://github.com/nanda-costa/gestor-pdi-track.git
+cd gestor-pdi-track
 ```
 
 ### 2. Criar o arquivo de ambiente
@@ -198,7 +198,9 @@ curl -X POST http://localhost:8001/items \
   -d '{
     "name": "Notebook",
     "description": "Notebook destinado às atividades do projeto",
-    "active": true
+    "active": true,
+    "idprojeto": 1,
+    "idbolsista": 1
   }'
 ```
 
@@ -273,5 +275,5 @@ O <strong>PD&amp;I Track</strong> foi pensado como uma base inicial para um sist
 ---
 
 <p align="center">
-  Desenvolvido como projeto final da disciplina <strong>Fundamentos de Docker</strong>, ministrada pelo <strong>Professor Fabio Santos da Silva</strong> no ano 2026.
+  Desenvolvido como projeto final da disciplina <strong>Fundamentos de Docker</strong>, ministrada pelo <strong>Professor Fabio Santos da Silva</strong> no ano de 2026.
 </p>
